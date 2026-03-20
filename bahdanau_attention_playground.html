@@ -1,0 +1,531 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.pg{padding:1rem 0}
+.tabs{display:flex;gap:4px;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:1.5rem;flex-wrap:wrap}
+.tab{padding:8px 14px;font-size:13px;cursor:pointer;border-radius:6px 6px 0 0;color:var(--color-text-secondary);border:0.5px solid transparent;background:transparent;transition:all .15s}
+.tab.active{color:var(--color-text-primary);background:var(--color-background-primary);border-color:var(--color-border-tertiary);border-bottom-color:var(--color-background-primary);font-weight:500}
+.tab:hover:not(.active){background:var(--color-background-secondary)}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1rem}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-teal{background:#E1F5EE;color:#085041}
+.badge-amber{background:#FAEEDA;color:#633806}
+.badge-purple{background:#EEEDFE;color:#3C3489}
+.badge-coral{background:#FAECE7;color:#712B13}
+.step-nav{display:flex;align-items:center;gap:8px;margin:1rem 0}
+.step-dot{width:28px;height:28px;border-radius:50%;border:0.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;color:var(--color-text-secondary);transition:all .2s;flex-shrink:0}
+.step-dot.active{background:#185FA5;color:#E6F1FB;border-color:#185FA5;font-weight:500}
+.step-dot.done{background:#1D9E75;color:#E1F5EE;border-color:#1D9E75}
+.step-line{flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.btn{padding:7px 16px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-size:13px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.btn-primary:hover{background:#0C447C}
+svg text{font-family:var(--font-sans)}
+.anim-node{transition:all .4s}
+.formula-box{background:var(--color-background-secondary);border-left:3px solid #185FA5;border-radius:0 6px 6px 0;padding:10px 14px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);margin:8px 0}
+.heat-cell{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;font-size:11px;border-radius:4px;font-weight:500;transition:all .3s}
+.tutor-msg{padding:10px 14px;border-radius:var(--border-radius-md);margin:6px 0;font-size:13px;max-width:90%;line-height:1.6}
+.tutor-msg.ai{background:var(--color-background-secondary);align-self:flex-start}
+.tutor-msg.user{background:#E6F1FB;color:#042C53;align-self:flex-end;margin-left:auto}
+.chat-area{display:flex;flex-direction:column;gap:4px;min-height:180px;max-height:260px;overflow-y:auto;padding:8px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:8px}
+.quiz-opt{padding:8px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;margin:4px 0;transition:all .15s}
+.quiz-opt:hover{background:var(--color-background-secondary)}
+.quiz-opt.correct{background:#EAF3DE;border-color:#3B6D11;color:#173404}
+.quiz-opt.wrong{background:#FCEBEB;border-color:#A32D2D;color:#501313}
+.progress-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin:4px 0}
+.progress-fill{height:100%;border-radius:2px;background:#185FA5;transition:width .4s}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes flow{0%{stroke-dashoffset:24}100%{stroke-dashoffset:0}}
+.flowing{stroke-dasharray:6 4;animation:flow .8s linear infinite}
+.pulsing{animation:pulse 1.2s ease-in-out infinite}
+</style>
+
+<div class="pg">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+  <div style="width:36px;height:36px;background:#E6F1FB;border-radius:8px;display:flex;align-items:center;justify-content:center">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="8" width="5" height="5" rx="1.5" fill="#185FA5"/><rect x="9" y="5" width="5" height="5" rx="1.5" fill="#1D9E75"/><rect x="14" y="11" width="5" height="5" rx="1.5" fill="#BA7517"/><line x1="7" y1="10.5" x2="9" y2="7.5" stroke="#888780" stroke-width="1"/><line x1="14" y1="13.5" x2="14" y2="13.5" stroke="#888780" stroke-width="1"/></svg>
+  </div>
+  <div>
+    <div style="font-size:17px;font-weight:500;color:var(--color-text-primary)">Bahdanau Attention — interactive playground</div>
+    <div style="font-size:12px;color:var(--color-text-secondary)">Seq2seq + attention · based on Nitish's deep learning lecture</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+    <span class="badge badge-teal">Encoder</span>
+    <span class="badge badge-amber">Attention</span>
+    <span class="badge badge-purple">Decoder</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('learn')">Learn</button>
+  <button class="tab" onclick="switchTab('simulate')">Simulate</button>
+  <button class="tab" onclick="switchTab('heatmap')">Attention map</button>
+  <button class="tab" onclick="switchTab('knowledge')">Knowledge base</button>
+  <button class="tab" onclick="switchTab('tutor')">AI tutor</button>
+  <button class="tab" onclick="switchTab('code')">Code</button>
+</div>
+
+<div id="learn" class="panel active">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div class="step-nav" id="stepNav" style="flex:1;min-width:280px"></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn" onclick="prevStep()">Prev</button>
+      <button class="btn btn-primary" id="playBtn" onclick="togglePlay()">Play</button>
+      <button class="btn" onclick="nextStep()">Next</button>
+      <select id="speedSel" style="padding:6px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:12px;background:transparent;color:var(--color-text-primary)">
+        <option value="1200">0.5x</option>
+        <option value="700" selected>1x</option>
+        <option value="350">2x</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0.75rem 1.25rem;margin-bottom:0.75rem">
+    <div id="stepTitle" style="font-size:15px;font-weight:500;margin-bottom:4px"></div>
+    <div id="stepDesc" style="font-size:13px;color:var(--color-text-secondary);line-height:1.6"></div>
+    <div id="stepFormula" class="formula-box" style="display:none"></div>
+  </div>
+
+  <svg id="mainSvg" width="100%" viewBox="0 0 640 320" style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);background:var(--color-background-primary)"></svg>
+
+  <div style="display:flex;gap:8px;margin-top:0.75rem;flex-wrap:wrap">
+    <button class="btn" onclick="sendPrompt('Explain the encoder in Bahdanau attention in detail')">Deep dive: encoder ↗</button>
+    <button class="btn" onclick="sendPrompt('What is the context vector in Bahdanau attention?')">Context vector ↗</button>
+    <button class="btn" onclick="sendPrompt('How does attention score calculation work mathematically?')">Math details ↗</button>
+  </div>
+</div>
+
+<div id="simulate" class="panel">
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:10px">Enter your sentence</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="inputSent" type="text" value="I love India" style="flex:1;min-width:160px;padding:8px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:13px;background:transparent;color:var(--color-text-primary)" placeholder="Type an English sentence...">
+      <button class="btn btn-primary" onclick="runSimulation()">Encode + translate</button>
+      <button class="btn" onclick="toggleCompare()" id="compareBtn">Compare: without attention</button>
+    </div>
+    <div id="compareNote" style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;display:none">Without attention: the entire sentence is compressed into one fixed vector — long sentences lose early words.</div>
+  </div>
+
+  <div id="simOutput" style="display:none">
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">Token-by-token encoding</div>
+    <div id="tokenTrack" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem"></div>
+
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">Hidden states</div>
+    <div id="hiddenStates" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem"></div>
+
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">Attention weights per output step</div>
+    <div id="simHeatmap" style="margin-bottom:1rem"></div>
+
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">Translation output</div>
+    <div id="translOutput" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<div id="heatmap" class="panel">
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:10px">Attention weight heatmap</div>
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px">Rows = decoder output tokens · Columns = encoder input tokens · Darker = higher attention weight</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn" onclick="loadPreset('translate')">Translation example</button>
+      <button class="btn" onclick="loadPreset('sentiment')">Sentiment example</button>
+      <button class="btn" onclick="loadPreset('qa')">Q&amp;A example</button>
+    </div>
+    <div id="heatmapViz"></div>
+    <div style="margin-top:12px;font-size:12px;color:var(--color-text-secondary)">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="display:flex;gap:2px">
+          <div style="width:16px;height:16px;background:#E6F1FB;border-radius:2px"></div>
+          <div style="width:16px;height:16px;background:#85B7EB;border-radius:2px"></div>
+          <div style="width:16px;height:16px;background:#378ADD;border-radius:2px"></div>
+          <div style="width:16px;height:16px;background:#185FA5;border-radius:2px"></div>
+          <div style="width:16px;height:16px;background:#042C53;border-radius:2px"></div>
+        </div>
+        <span>Low attention → High attention</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">What you're seeing</div>
+    <div id="heatmapExplain" style="font-size:13px;color:var(--color-text-secondary);line-height:1.7"></div>
+  </div>
+</div>
+
+<div id="knowledge" class="panel">
+  <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:8px">What is attention?</div>
+      <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7">In vanilla seq2seq (encoder-decoder), the entire input sentence gets squeezed into a single fixed-size context vector. For long sentences this bottle-necks — early words get forgotten.<br><br>Attention solves this by giving the decoder dynamic access to ALL encoder hidden states at every decoding step, weighted by relevance.</div>
+      <button class="btn" style="margin-top:10px;font-size:12px" onclick="sendPrompt('Explain what attention mechanism is in simple terms with an analogy')">Full explanation ↗</button>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:8px">Bahdanau vs Luong attention</div>
+      <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7">
+        <b style="font-weight:500">Bahdanau (additive):</b> score = vᵀ · tanh(W₁·hₛ + W₂·hₜ)<br>
+        Uses a feedforward network. Attends BEFORE decoding current word.<br><br>
+        <b style="font-weight:500">Luong (multiplicative):</b> score = hₜᵀ · Wₐ · hₛ<br>
+        Simpler dot-product style. Attends AFTER decoding current word.
+      </div>
+      <button class="btn" style="margin-top:10px;font-size:12px" onclick="sendPrompt('Compare Bahdanau and Luong attention mechanisms in detail')">Compare ↗</button>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:8px">The 5 stages (from Nitish's lecture)</div>
+      <div style="font-size:13px;line-height:1.9">
+        <div style="display:flex;align-items:center;gap:8px"><span class="badge badge-coral">1</span> Encoder-decoder (2014, Ilya Sutskever)</div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="badge badge-amber">2</span> Attention mechanism (2015, Bahdanau)</div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="badge badge-teal">3</span> Transformers (2017, "Attention is all you need")</div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="badge badge-purple">4</span> Transfer learning / ULMFiT (2018)</div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="badge badge-teal">5</span> LLMs: BERT, GPT → ChatGPT</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:8px">RLHF — how ChatGPT was trained</div>
+      <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7">Reinforcement Learning from Human Feedback:<br><b style="font-weight:500">Step 1</b> — Supervised fine-tuning on human conversation data<br><b style="font-weight:500">Step 2</b> — Humans rank multiple model responses<br><b style="font-weight:500">Step 3</b> — RL trains model to prefer highly-ranked responses</div>
+      <button class="btn" style="margin-top:10px;font-size:12px" onclick="sendPrompt('Explain RLHF - Reinforcement Learning from Human Feedback used in ChatGPT')">RLHF deep dive ↗</button>
+    </div>
+  </div>
+</div>
+
+<div id="tutor" class="panel">
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:4px">AI tutor — ask anything about attention</div>
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">Quick questions below, or type your own</div>
+    <div class="chat-area" id="chatArea">
+      <div class="tutor-msg ai">Hi! I'm your attention mechanism tutor. Ask me anything, or try one of the quick questions below.</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <input id="tutorInput" type="text" placeholder="Ask a question..." style="flex:1;padding:8px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:13px;background:transparent;color:var(--color-text-primary)" onkeydown="if(event.key==='Enter')tutorSend()">
+      <button class="btn btn-primary" onclick="tutorSend()">Ask</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn" style="font-size:11px" onclick="quickQ('Why does attention improve translation?')">Why attention helps translation</button>
+      <button class="btn" style="font-size:11px" onclick="quickQ('What is a context vector?')">What is context vector?</button>
+      <button class="btn" style="font-size:11px" onclick="quickQ('Explain softmax in attention')">Softmax in attention</button>
+      <button class="btn" style="font-size:11px" onclick="startQuiz()">Take a quiz</button>
+    </div>
+  </div>
+  <div id="quizSection" style="display:none">
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:8px">Quick quiz</div>
+      <div id="quizContent"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code" class="panel">
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:8px">PyTorch — Bahdanau attention (additive)</div>
+    <pre style="font-family:var(--font-mono);font-size:12px;line-height:1.7;overflow-x:auto;color:var(--color-text-primary);white-space:pre-wrap"><code>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class BahdanauAttention(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.W1 = nn.Linear(hidden_size, hidden_size)
+        self.W2 = nn.Linear(hidden_size, hidden_size)
+        self.v  = nn.Linear(hidden_size, 1)
+
+    def forward(self, query, keys):
+        # query: [batch, hidden]  (decoder hidden state)
+        # keys:  [batch, seq_len, hidden]  (all encoder hidden states)
+        query = query.unsqueeze(1)          # [batch, 1, hidden]
+        energy = torch.tanh(
+            self.W1(keys) + self.W2(query)  # broadcast add
+        )                                   # [batch, seq_len, hidden]
+        scores  = self.v(energy).squeeze(-1)# [batch, seq_len]
+        weights = F.softmax(scores, dim=1)  # [batch, seq_len]
+        # Weighted sum of encoder states
+        context = torch.bmm(
+            weights.unsqueeze(1), keys      # [batch, 1, hidden]
+        ).squeeze(1)
+        return context, weights</code></pre>
+    <button class="btn" style="margin-top:8px;font-size:12px" onclick="sendPrompt('Show me a complete seq2seq model with Bahdanau attention in PyTorch including encoder and decoder')">Full model ↗</button>
+  </div>
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:8px">Alignment score formula</div>
+    <div class="formula-box">e(s,t) = vᵀ · tanh( W₁·hₛ + W₂·hₜ₋₁ )</div>
+    <div class="formula-box">α(s,t) = softmax( e(s,t) )   ← attention weights</div>
+    <div class="formula-box">c(t)   = Σₛ α(s,t) · hₛ      ← context vector</div>
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;line-height:1.7">hₛ = encoder hidden state at position s &nbsp;·&nbsp; hₜ₋₁ = previous decoder state &nbsp;·&nbsp; v, W₁, W₂ = learned parameters</div>
+    <button class="btn" style="margin-top:8px;font-size:12px" onclick="sendPrompt('Explain the Bahdanau attention score formula step by step')">Formula walkthrough ↗</button>
+  </div>
+</div>
+</div>
+
+<script>
+var currentStep=0,playing=false,playTimer=null;
+var steps=[
+  {title:"1 — Encoder reads input, word by word",desc:"The encoder is an LSTM (or RNN) that reads the input sentence one token at a time. At every step it updates its internal cell state (cₜ) and hidden state (hₜ).",formula:"h₁, h₂, ... hₙ  =  LSTM( x₁, x₂, ... xₙ )",active:[0,1,2],edges:[[0,1],[1,2]],phase:"encode"},
+  {title:"2 — Hidden states captured at every step",desc:"Unlike vanilla seq2seq that only keeps the last hidden state, Bahdanau attention saves ALL encoder hidden states h₁…hₙ. Each hᵢ captures what the encoder understood up to token i.",formula:"Store: H = [h₁, h₂, ... hₙ]",active:[0,1,2],edges:[[0,1],[1,2]],phase:"store"},
+  {title:"3 — Attention score calculation",desc:"For each decoder step t, we score every encoder hidden state hₛ against the current decoder state hₜ₋₁ using a feedforward network. Higher score = more relevant.",formula:"e(s,t) = vᵀ · tanh( W₁·hₛ + W₂·hₜ₋₁ )",active:[0,1,2,3],edges:[[0,3],[1,3],[2,3]],phase:"score"},
+  {title:"4 — Softmax → attention weights α",desc:"The raw scores are normalized with softmax so all weights sum to 1. This gives a probability distribution: how much attention to pay to each encoder position.",formula:"α(s,t) = exp(e(s,t)) / Σ exp(e(s,t))",active:[3],edges:[[0,3],[1,3],[2,3],[3,4]],phase:"softmax"},
+  {title:"5 — Context vector = weighted sum",desc:"The context vector c(t) is computed as the weighted sum of all encoder hidden states, using the attention weights. It's dynamic — it changes for every output word!",formula:"c(t) = Σₛ α(s,t) · hₛ",active:[3,4],edges:[[3,4],[4,5],[4,6],[4,7]],phase:"context"},
+  {title:"6 — Decoder generates output",desc:"The decoder receives c(t) + previous output + its own hidden state to predict the next token. This is repeated until the end token is produced.",formula:"yₜ = softmax( Wₛ · [ hₜ ; c(t) ] + b )",active:[4,5,6,7],edges:[[4,5],[4,6],[4,7]],phase:"decode"}
+];
+var nodes=[
+  {id:0,x:60,y:160,w:72,h:40,label:"Enc RNN",sub:"Input 1",color:"#E1F5EE",stroke:"#0F6E56",tc:"#085041"},
+  {id:1,x:170,y:160,w:72,h:40,label:"Enc RNN",sub:"Input 2",color:"#E1F5EE",stroke:"#0F6E56",tc:"#085041"},
+  {id:2,x:280,y:160,w:72,h:40,label:"Enc RNN",sub:"Input 3",color:"#E1F5EE",stroke:"#0F6E56",tc:"#085041"},
+  {id:3,x:200,y:60,w:90,h:36,label:"Attention",sub:"score layer",color:"#FAEEDA",stroke:"#854F0B",tc:"#633806"},
+  {id:4,x:400,y:130,w:88,h:40,label:"Context",sub:"vector c(t)",color:"#EEEDFE",stroke:"#534AB7",tc:"#3C3489"},
+  {id:5,x:510,y:60,w:80,h:36,label:"Dec RNN",sub:"Out 1",color:"#FAECE7",stroke:"#993C1D",tc:"#712B13"},
+  {id:6,x:510,y:150,w:80,h:36,label:"Dec RNN",sub:"Out 2",color:"#FAECE7",stroke:"#993C1D",tc:"#712B13"},
+  {id:7,x:510,y:240,w:80,h:36,label:"Dec RNN",sub:"Out 3",color:"#FAECE7",stroke:"#993C1D",tc:"#712B13"}
+];
+function nx(n){return n.x+n.w/2}
+function ny(n){return n.y+n.h/2}
+function renderNav(){
+  var nav=document.getElementById('stepNav');
+  nav.innerHTML='';
+  steps.forEach(function(s,i){
+    var dot=document.createElement('div');
+    dot.className='step-dot'+(i===currentStep?' active':i<currentStep?' done':'');
+    dot.textContent=i+1;
+    dot.onclick=function(){currentStep=i;renderStep()};
+    nav.appendChild(dot);
+    if(i<steps.length-1){var l=document.createElement('div');l.className='step-line';nav.appendChild(l)}
+  });
+}
+function renderStep(){
+  renderNav();
+  var s=steps[currentStep];
+  document.getElementById('stepTitle').textContent=s.title;
+  document.getElementById('stepDesc').textContent=s.desc;
+  var fb=document.getElementById('stepFormula');
+  fb.style.display='block';fb.textContent=s.formula;
+  renderSvg(s);
+}
+function renderSvg(s){
+  var svg=document.getElementById('mainSvg');
+  var defs='<defs><marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+  var out=defs;
+  var active=s.active||[];
+  var edgeSet=s.edges||[];
+  edgeSet.forEach(function(e){
+    var a=nodes[e[0]],b=nodes[e[1]];
+    var x1=nx(a),y1=ny(a),x2=nx(b),y2=ny(b);
+    var cls=active.indexOf(e[0])>=0&&active.indexOf(e[1])>=0?'flowing':'';
+    out+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#378ADD" stroke-width="1.5" fill="none" marker-end="url(#arr2)" class="'+cls+'" stroke-dasharray="'+(cls?'6 4':'none')+'"/>';
+  });
+  nodes.forEach(function(n,i){
+    var isActive=active.indexOf(i)>=0;
+    var bg=isActive?n.color:'var(--color-background-secondary)';
+    var sc=isActive?n.stroke:'var(--color-border-tertiary)';
+    var tc=isActive?n.tc:'var(--color-text-secondary)';
+    var pw=isActive?1.5:0.5;
+    var pulse=isActive?' class="pulsing"':'';
+    out+='<g'+pulse+'>';
+    out+='<rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="8" fill="'+bg+'" stroke="'+sc+'" stroke-width="'+pw+'"/>';
+    out+='<text x="'+nx(n)+'" y="'+(n.y+14)+'" text-anchor="middle" font-size="12" font-weight="500" fill="'+tc+'">'+n.label+'</text>';
+    out+='<text x="'+nx(n)+'" y="'+(n.y+27)+'" text-anchor="middle" font-size="10" fill="'+(isActive?n.stroke:'var(--color-text-tertiary)')+'">'+n.sub+'</text>';
+    out+='</g>';
+    if(isActive&&(i===0||i===1||i===2)){
+      var hx=nx(n),hy=n.y-14;
+      out+='<rect x="'+(hx-18)+'" y="'+(hy-11)+'" width="36" height="18" rx="4" fill="'+n.color+'" stroke="'+n.stroke+'" stroke-width="0.5"/>';
+      out+='<text x="'+hx+'" y="'+(hy+2)+'" text-anchor="middle" font-size="10" fill="'+n.tc+'">h'+(i+1)+'</text>';
+    }
+  });
+  var labels=[['I','mujhe'],['love','bharat'],['India','pyar']];
+  labels.forEach(function(l,i){
+    var n=nodes[i];
+    out+='<text x="'+nx(n)+'" y="'+(n.y+n.h+14)+'" text-anchor="middle" font-size="11" fill="var(--color-text-tertiary)">'+l[0]+' → '+l[1]+'</text>';
+  });
+  out+='<text x="30" y="260" font-size="11" fill="var(--color-text-tertiary)">Encoder</text>';
+  out+='<text x="410" y="115" font-size="11" fill="var(--color-text-tertiary)">Decoder</text>';
+  svg.innerHTML=out;
+}
+function nextStep(){if(currentStep<steps.length-1){currentStep++;renderStep()}}
+function prevStep(){if(currentStep>0){currentStep--;renderStep()}}
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'Pause':'Play';
+  if(playing){
+    var spd=parseInt(document.getElementById('speedSel').value);
+    function tick(){if(!playing)return;if(currentStep<steps.length-1){currentStep++;renderStep();playTimer=setTimeout(tick,spd)}else{playing=false;document.getElementById('playBtn').textContent='Play'}}
+    tick();
+  }else{clearTimeout(playTimer)}
+}
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',t.onclick.toString().indexOf("'"+id+"'")>=0)});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  if(id==='heatmap')loadPreset('translate');
+  if(id==='simulate')renderSimulate();
+}
+
+var simStep=0,simTimer=null;
+function renderSimulate(){document.getElementById('simOutput').style.display='none';document.getElementById('tokenTrack').innerHTML='';document.getElementById('hiddenStates').innerHTML='';document.getElementById('simHeatmap').innerHTML='';document.getElementById('translOutput').innerHTML=''}
+function runSimulation(){
+  var sent=document.getElementById('inputSent').value.trim()||'I love India';
+  var tokens=sent.split(' ');
+  var simOut=document.getElementById('simOutput');
+  simOut.style.display='block';
+  var track=document.getElementById('tokenTrack');
+  var states=document.getElementById('hiddenStates');
+  var tOut=document.getElementById('translOutput');
+  track.innerHTML='';states.innerHTML='';tOut.innerHTML='';
+  var mockTransl=['mujhe','bharat','se','pyar','hai'];
+  var mockWeights=tokens.map(function(_,i){return mockTransl.map(function(_,j){
+    var w=Math.random();if(i===j%tokens.length)w+=0.5;return Math.min(1,w);
+  })});
+  var norm=mockTransl.map(function(_,j){var s=tokens.reduce(function(a,_,i){return a+mockWeights[i][j]},0);return s});
+  tokens.forEach(function(tok,i){
+    var d=document.createElement('div');
+    d.style.cssText='padding:6px 12px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);font-size:13px;opacity:0;transition:all .4s';
+    d.textContent=tok;
+    track.appendChild(d);
+    setTimeout(function(){d.style.opacity='1';d.style.background='#E1F5EE';d.style.borderColor='#0F6E56';d.style.color='#085041'},i*300+100);
+    setTimeout(function(){
+      var s=document.createElement('div');
+      s.style.cssText='padding:8px 14px;border-radius:var(--border-radius-md);background:#E1F5EE;border:0.5px solid #1D9E75;font-size:12px;color:#085041;text-align:center';
+      s.innerHTML='<div style="font-weight:500">h'+(i+1)+'</div><div style="color:#0F6E56;font-size:10px">['+Array.from({length:3},function(){return (Math.random()*2-1).toFixed(2)}).join(', ')+']</div>';
+      states.appendChild(s);
+    },i*300+400);
+  });
+  var heatHtml='<div style="display:grid;gap:3px"><div style="display:flex;gap:3px;margin-bottom:2px"><div style="width:60px"></div>';
+  tokens.forEach(function(t){heatHtml+='<div style="width:44px;text-align:center;font-size:11px;color:var(--color-text-secondary);overflow:hidden;text-overflow:ellipsis">'+t+'</div>'});
+  heatHtml+='</div>';
+  mockTransl.forEach(function(out,j){
+    heatHtml+='<div style="display:flex;align-items:center;gap:3px"><div style="width:60px;font-size:11px;color:var(--color-text-secondary)">'+out+'</div>';
+    tokens.forEach(function(_,i){
+      var w=mockWeights[i][j]/norm[j];
+      var intensity=Math.round(w*255);
+      var bg='rgb('+(255-Math.round(intensity*0.6))+','+(255-Math.round(intensity*0.4))+',255)';
+      var tc=intensity>150?'#042C53':'var(--color-text-secondary)';
+      heatHtml+='<div style="width:44px;height:30px;background:'+bg+';border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:'+tc+';font-weight:500">'+(w*100).toFixed(0)+'%</div>';
+    });
+    heatHtml+='</div>';
+  });
+  heatHtml+='</div>';
+  document.getElementById('simHeatmap').innerHTML=heatHtml;
+  var delay=tokens.length*300+600;
+  mockTransl.forEach(function(w,i){
+    setTimeout(function(){
+      var d=document.createElement('div');
+      d.style.cssText='padding:6px 12px;border-radius:var(--border-radius-md);background:#EEEDFE;border:0.5px solid #534AB7;font-size:13px;color:#3C3489;opacity:0;transition:all .3s';
+      d.textContent=w;
+      tOut.appendChild(d);
+      setTimeout(function(){d.style.opacity='1'},50);
+    },delay+i*280);
+  });
+}
+var compareOn=false;
+function toggleCompare(){
+  compareOn=!compareOn;
+  document.getElementById('compareNote').style.display=compareOn?'block':'none';
+  document.getElementById('compareBtn').textContent=compareOn?'Hide comparison':'Compare: without attention';
+}
+
+var heatPresets={
+  translate:{
+    inputs:['I','love','India'],
+    outputs:['mujhe','bharat','se','pyar','hai'],
+    weights:[[0.85,0.05,0.1],[0.05,0.9,0.05],[0.1,0.3,0.6],[0.1,0.7,0.2],[0.15,0.5,0.35]],
+    explain:"In this translation from English to Hindi, notice how 'mujhe' attends heavily to 'I', 'bharat' attends to 'India', and 'pyar' attends to 'love'. The attention is reordering and aligning words across languages — exactly what Bahdanau designed it to do!"
+  },
+  sentiment:{
+    inputs:['great','movie','sadly'],
+    outputs:['positive','confident','negative'],
+    weights:[[0.8,0.15,0.05],[0.6,0.35,0.05],[0.05,0.1,0.85]],
+    explain:"For sentiment analysis, the model strongly attends to sentiment-bearing words. 'Great' gets high weight for predicting positive sentiment, while 'sadly' dominates the negative output. The model has learned to focus on emotionally loaded tokens."
+  },
+  qa:{
+    inputs:['what','is','capital'],
+    outputs:['the','answer','is','Delhi'],
+    weights:[[0.4,0.2,0.4],[0.3,0.4,0.3],[0.2,0.35,0.45],[0.15,0.15,0.7]],
+    explain:"In question answering, the model attends heavily to the key question words. 'Capital' gets the most attention when generating the answer 'Delhi' — the model has aligned the question's intent with its knowledge of Indian geography."
+  }
+};
+function loadPreset(name){
+  var p=heatPresets[name];
+  var html='<div style="display:grid;gap:3px">';
+  html+='<div style="display:flex;gap:3px;margin-bottom:4px"><div style="width:64px"></div>';
+  p.inputs.forEach(function(t){html+='<div style="width:48px;text-align:center;font-size:12px;color:var(--color-text-secondary);font-weight:500">'+t+'</div>'});
+  html+='</div>';
+  p.outputs.forEach(function(out,i){
+    html+='<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">';
+    html+='<div style="width:64px;font-size:12px;color:var(--color-text-secondary)">'+out+'</div>';
+    var blues=['#E6F1FB','#85B7EB','#378ADD','#185FA5','#042C53'];
+    p.weights[i].forEach(function(w){
+      var idx=Math.min(4,Math.floor(w*5));
+      var bg=blues[idx];
+      var tc=idx>=3?'#E6F1FB':'#042C53';
+      html+='<div style="width:48px;height:36px;background:'+bg+';border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:'+tc+';font-weight:500">'+(w*100).toFixed(0)+'%</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('heatmapViz').innerHTML=html;
+  document.getElementById('heatmapExplain').textContent=p.explain;
+}
+
+var qaMap={
+  'why does attention improve translation':'Attention improves translation by letting the decoder look at ALL encoder hidden states dynamically, instead of relying on one compressed context vector. When translating long sentences, early words are not forgotten. For each output word, the model automatically focuses on the most relevant input words.',
+  'what is a context vector':'The context vector c(t) is a weighted sum of all encoder hidden states. It changes at every decoder step based on the current attention weights. Think of it as: "what parts of the input sentence are most relevant RIGHT NOW for generating this output word?"',
+  'explain softmax in attention':'Softmax converts raw alignment scores into a probability distribution (weights that sum to 1). Formula: α = softmax(e). A high score for encoder state i means the decoder will "pay more attention" to that position when computing the context vector.',
+  'what is bahdanau attention':'Bahdanau attention (2015) introduced the attention mechanism to seq2seq models. It uses an additive scoring function: e(s,t) = vᵀ·tanh(W₁·hₛ + W₂·hₜ₋₁). The key innovation: every decoder step gets its own dynamically computed context vector.',
+  'quiz':'Let me quiz you!'
+};
+function tutorSend(){
+  var inp=document.getElementById('tutorInput');
+  var q=inp.value.trim();if(!q)return;
+  addMsg(q,'user');
+  inp.value='';
+  setTimeout(function(){
+    var key=q.toLowerCase();
+    var ans=null;
+    Object.keys(qaMap).forEach(function(k){if(key.indexOf(k)>=0)ans=qaMap[k]});
+    if(!ans)ans='Great question! Let me send this to Claude for a full explanation.';
+    addMsg(ans,'ai');
+    if(key.indexOf('quiz')>=0)startQuiz();
+  },400);
+}
+function quickQ(q){document.getElementById('tutorInput').value=q;tutorSend()}
+function addMsg(text,type){
+  var area=document.getElementById('chatArea');
+  var d=document.createElement('div');
+  d.className='tutor-msg '+type;
+  d.textContent=text;
+  area.appendChild(d);
+  area.scrollTop=area.scrollHeight;
+}
+var quizQs=[
+  {q:'What is the main problem with vanilla encoder-decoder (no attention)?',opts:['Too slow to train','Single context vector forgets early words','Too many parameters','Cannot handle English'],ans:1},
+  {q:'In Bahdanau attention, what does α(s,t) represent?',opts:['The output word','The LSTM gate value','Attention weight for encoder state s at decoder step t','The learning rate'],ans:2},
+  {q:'What year was "Attention is all you need" (Transformers) published?',opts:['2014','2015','2017','2020'],ans:2},
+  {q:'What does RLHF stand for?',opts:['Real Learning from Humans First','Reinforcement Learning from Human Feedback','Recursive Language and Human Feedback','None of the above'],ans:1}
+];
+var qIdx=0,score=0;
+function startQuiz(){
+  qIdx=0;score=0;
+  document.getElementById('quizSection').style.display='block';
+  renderQ();
+}
+function renderQ(){
+  if(qIdx>=quizQs.length){
+    document.getElementById('quizContent').innerHTML='<div style="font-size:14px;font-weight:500">Score: '+score+'/'+quizQs.length+'</div><div style="font-size:13px;color:var(--color-text-secondary);margin-top:6px">'+(score>=3?'Excellent! You understand Bahdanau attention well.':'Keep exploring the playground and try again!')+'</div><button class="btn" style="margin-top:10px" onclick="startQuiz()">Retry quiz</button>';
+    return;
+  }
+  var q=quizQs[qIdx];
+  var html='<div style="font-size:13px;font-weight:500;margin-bottom:10px">'+(qIdx+1)+'/'+quizQs.length+': '+q.q+'</div>';
+  q.opts.forEach(function(o,i){
+    html+='<div class="quiz-opt" id="qo'+i+'" onclick="answerQ('+i+','+q.ans+')">'+o+'</div>';
+  });
+  document.getElementById('quizContent').innerHTML=html;
+}
+function answerQ(i,correct){
+  document.querySelectorAll('.quiz-opt').forEach(function(el){el.onclick=null});
+  document.querySelectorAll('.quiz-opt').forEach(function(el,j){
+    if(j===correct)el.classList.add('correct');
+    else if(j===i&&i!==correct)el.classList.add('wrong');
+  });
+  if(i===correct)score++;
+  setTimeout(function(){qIdx++;renderQ()},900);
+}
+
+currentStep=0;
+renderStep();
+</script>
