@@ -1,0 +1,322 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:0.75rem 0;font-family:var(--font-sans)}
+.step-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.sdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);transition:all .2s;flex-shrink:0;font-weight:400}
+.sdot.on{background:#185FA5;color:#E6F1FB;border-color:#185FA5;font-weight:500}
+.sdot.done{background:#1D9E75;color:#E1F5EE;border-color:#1D9E75}
+.sline{flex:1;height:0.5px;background:var(--color-border-tertiary);min-width:12px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.fbox{background:var(--color-background-secondary);border-left:3px solid #378ADD;border-radius:0 6px 6px 0;padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);margin:8px 0;line-height:1.8}
+.btn{padding:6px 14px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btnp{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.btnp:hover{background:#0C447C;color:#E6F1FB}
+.bar-wrap{display:flex;align-items:center;gap:8px;margin:5px 0}
+.bar-bg{flex:1;height:24px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden;min-width:80px}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px}
+.tok{padding:5px 11px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;transition:all .3s}
+.formula-highlight{background:#EEEDFE;border:1px solid #AFA9EC;border-radius:6px;padding:2px 7px;font-family:var(--font-mono);font-size:12px;color:#3C3489;display:inline}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop .35s ease-out forwards}
+@keyframes flowline{0%{stroke-dashoffset:30}100%{stroke-dashoffset:0}}
+.fl{stroke-dasharray:6 4;animation:flowline .9s linear infinite}
+</style>
+
+<div class="wrap">
+
+<div class="step-row" id="stepNav"></div>
+
+<div class="card" id="mainCard">
+  <div id="stepTitle" style="font-size:15px;font-weight:500;margin-bottom:6px;color:var(--color-text-primary)"></div>
+  <div id="stepBody" style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:8px"></div>
+  <div id="stepFormula" class="fbox" style="display:none"></div>
+  <div id="stepAnalogy" style="display:none;border-left:3px solid #1D9E75;border-radius:0 6px 6px 0;background:var(--color-background-secondary);padding:8px 12px;font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-top:8px"></div>
+</div>
+
+<div id="vizArea"></div>
+
+<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+  <button class="btn" onclick="prevStep()">Prev</button>
+  <button class="btn btnp" id="nextBtn" onclick="nextStep()">Next step</button>
+  <button class="btn" style="margin-left:auto" onclick="sendPrompt('Show me the full Bahdanau attention PyTorch code with context vector computation')">Full PyTorch code ↗</button>
+  <button class="btn" onclick="sendPrompt('What is the difference between Bahdanau and Luong attention context vectors?')">vs Luong ↗</button>
+</div>
+
+</div>
+
+<script>
+var step = 0;
+
+var inputTokens = ['I','love','India'];
+var outputTokens = ['mujhe','bharat','pyar'];
+
+var presetWeights = [
+  [0.75, 0.15, 0.10],
+  [0.08, 0.12, 0.80],
+  [0.05, 0.82, 0.13]
+];
+
+var hiddenStates = [
+  [0.82, -0.34, 0.61, 0.15],
+  [-0.12, 0.91, 0.44, -0.67],
+  [0.55, 0.23, -0.88, 0.71]
+];
+
+var steps = [
+  {
+    title: 'Start — the encoder produces hidden states',
+    body: 'The encoder LSTM reads the input sentence one token at a time. After processing each token xᵢ, it produces a hidden state hᵢ. These hidden states are NOT discarded — all of them are saved and made available to the attention layer.',
+    formula: 'h₁ = LSTM("I",   h₀)   →  [0.82, -0.34,  0.61,  0.15, ...]\nh₂ = LSTM("love", h₁)   → [-0.12,  0.91,  0.44, -0.67, ...]\nh₃ = LSTM("India",h₂)   →  [0.55,  0.23, -0.88,  0.71, ...]',
+    analogy: 'Think of each hᵢ as a page of notes. After reading "I", you write page 1. After reading "love", page 2. After "India", page 3. All three pages are kept on the desk — nothing thrown away.',
+    viz: 'hidstates'
+  },
+  {
+    title: 'Step 1 — compute alignment scores e(s,t)',
+    body: 'For each decoder step t (each output word we want to generate), we score EVERY encoder hidden state hₛ against the current decoder hidden state hₜ₋₁. This uses a small learned feedforward network. Higher score = encoder position s is more relevant for generating output word t.',
+    formula: 'e(s, t) = vᵀ · tanh( W₁·hₛ  +  W₂·hₜ₋₁ )\n\nFor t=1 (generating "mujhe"):\n  e(1,1) = 2.31   ← "I"     is very relevant\n  e(2,1) = 0.44   ← "love"  is somewhat relevant\n  e(3,1) = 0.18   ← "India" is less relevant',
+    analogy: 'The score asks: "How related is this source word to the target word I\'m about to write?" W₁, W₂, v are learned during training — the model teaches itself which alignments matter.',
+    viz: 'scores'
+  },
+  {
+    title: 'Step 2 — softmax turns scores into weights α(s,t)',
+    body: 'The raw scores e(s,t) are passed through softmax, which normalises them into a probability distribution. The result α(s,t) tells us: "What fraction of attention should the decoder pay to encoder position s when generating output token t?" All weights sum to exactly 1.0.',
+    formula: 'α(s,t) = exp(e(s,t)) / Σₛ exp(e(s,t))\n\nFor t=1 (generating "mujhe"):\n  α(1,1) = 0.75  ← 75% attention on "I"\n  α(2,1) = 0.15  ← 15% attention on "love"\n  α(3,1) = 0.10  ← 10% attention on "India"\n  ─────────────────────────────────────\n  Sum    = 1.00  ✓',
+    analogy: 'Softmax is like distributing a budget of 100 points among all source words. When generating "mujhe" (I in Hindi), most points go to "I", a few go to "love", and very few go to "India".',
+    viz: 'softmax'
+  },
+  {
+    title: 'Step 3 — weighted sum gives context vector c(t)',
+    body: 'The context vector c(t) is the weighted sum of ALL encoder hidden states, using the α weights computed in the previous step. Each encoder state hₛ is multiplied by its weight α(s,t), and the results are summed together. This is the key computation — it\'s a soft, differentiable lookup into the encoder memory.',
+    formula: 'c(t) = Σₛ α(s,t) · hₛ\n\nFor t=1 (generating "mujhe"):\n  c(1) = 0.75·h₁ + 0.15·h₂ + 0.10·h₃\n       = 0.75·[0.82,-0.34,0.61,0.15,...]\n       + 0.15·[-0.12,0.91,0.44,-0.67,...]\n       + 0.10·[0.55,0.23,-0.88,0.71,...]\n       = [0.63, -0.20, 0.42, 0.08, ...]',
+    analogy: 'Imagine three coloured paints: h₁=red, h₂=blue, h₃=green. Mixing them with weights 0.75, 0.15, 0.10 produces a colour that is mostly red with a touch of blue and green. c(t) is that mixed colour — a weighted blend of what the encoder understood at each position.',
+    viz: 'computation'
+  },
+  {
+    title: 'Step 4 — c(t) changes at every decoder step',
+    body: 'This is the critical insight. The context vector is NOT fixed. For each output word, the attention weights α are recomputed from scratch using the current decoder state, so c(t) dynamically shifts focus across the input. Watch how the weights redistribute completely when generating different output tokens.',
+    formula: 'Generating "mujhe" (I):     c(1) focuses on "I"     → α=[0.75, 0.15, 0.10]\nGenerating "bharat" (India): c(2) focuses on "India" → α=[0.05, 0.82, 0.13]\nGenerating "pyar"   (love):  c(3) focuses on "love"  → α=[0.08, 0.12, 0.80]',
+    analogy: 'It\'s like your eyes scanning back over the source sentence as you translate word by word. You don\'t stare at one fixed point — your gaze shifts to whatever is relevant right now.',
+    viz: 'dynamic'
+  },
+  {
+    title: 'Step 5 — decoder uses c(t) to generate output',
+    body: 'The decoder LSTM takes three inputs at each step: the previous output token yₜ₋₁, its previous hidden state hₜ₋₁, and the freshly computed context vector c(t). It produces a probability distribution over the entire vocabulary, and the highest-probability token becomes the output word.',
+    formula: 'hₜ  = LSTM( [yₜ₋₁ ; c(t)],  hₜ₋₁ )\nyₜ  = softmax( Wₛ · concat(hₜ, c(t)) + b )\n\nThe decoder hidden state hₜ then becomes hₜ₋₁\nfor the NEXT step\'s attention score calculation.\nThis creates a feedback loop through the whole sequence.',
+    analogy: 'The decoder is a writer who, at every word, can glance back at whichever part of the source material is most relevant right now — rather than relying on a single summary they wrote at the start.',
+    viz: 'decoder'
+  }
+];
+
+function buildNav() {
+  var nav = document.getElementById('stepNav');
+  nav.innerHTML = '';
+  steps.forEach(function(s, i) {
+    if (i > 0) { var l = document.createElement('div'); l.className = 'sline'; nav.appendChild(l); }
+    var d = document.createElement('div');
+    d.className = 'sdot' + (i === step ? ' on' : i < step ? ' done' : '');
+    d.textContent = i + 1;
+    d.onclick = (function(idx){ return function(){ step = idx; render(); }; })(i);
+    nav.appendChild(d);
+  });
+}
+
+function render() {
+  buildNav();
+  var s = steps[step];
+  document.getElementById('stepTitle').textContent = s.title;
+  document.getElementById('stepBody').textContent = s.body;
+  var ff = document.getElementById('stepFormula');
+  ff.style.display = 'block'; ff.textContent = s.formula;
+  var fa = document.getElementById('stepAnalogy');
+  fa.style.display = 'block'; fa.textContent = s.analogy;
+  document.getElementById('nextBtn').textContent = step < steps.length - 1 ? 'Next step' : 'Done';
+  renderViz(s.viz);
+}
+
+function nextStep() { if (step < steps.length - 1) { step++; render(); } }
+function prevStep() { if (step > 0) { step--; render(); } }
+
+function renderViz(type) {
+  var el = document.getElementById('vizArea');
+
+  if (type === 'hidstates') {
+    var html = '<div class="card"><div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">All encoder hidden states — saved after each token</div>';
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
+    inputTokens.forEach(function(tok, i) {
+      var cols = [['#E1F5EE','#085041','#0F6E56'],['#E1F5EE','#085041','#0F6E56'],['#E1F5EE','#085041','#0F6E56']];
+      html += '<div class="pop" style="background:'+cols[i][0]+';border:0.5px solid '+cols[i][2]+';border-radius:10px;padding:10px 14px;min-width:130px">';
+      html += '<div style="font-size:13px;font-weight:500;color:'+cols[i][1]+';margin-bottom:6px">h'+(i+1)+' — "'+tok+'"</div>';
+      hiddenStates[i].forEach(function(v, j) {
+        html += '<div style="font-size:11px;font-family:var(--font-mono);color:'+cols[i][2]+'">['+j+'] '+v.toFixed(2)+'</div>';
+      });
+      html += '<div style="font-size:10px;color:'+cols[i][2]+';margin-top:4px">...×256 dims</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:8px 10px;border-radius:6px">All 3 hidden states kept in memory H = [h₁, h₂, h₃] — available to the attention layer at every decoder step</div>';
+    html += '</div>';
+    el.innerHTML = html;
+
+  } else if (type === 'scores') {
+    var scores = [[2.31, 0.44, 0.18],[0.22, 0.38, 2.65],[0.11, 2.88, 0.51]];
+    var html = '<div class="card"><div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Alignment scores e(s,t) — one per encoder position, per decoder step</div>';
+    html += '<div style="display:flex;gap:8px;margin-bottom:6px">';
+    outputTokens.forEach(function(tok, t) {
+      html += '<button class="btn'+(t===0?' btnp':'')+'" id="scBtn'+t+'" onclick="showScores('+t+')" style="font-size:11px">t='+(t+1)+' "'+tok+'"</button>';
+    });
+    html += '</div><div id="scoreDisplay">';
+    inputTokens.forEach(function(src, s) {
+      var sc = scores[0][s];
+      var w = Math.min(100, Math.round((sc / 3) * 100));
+      html += '<div class="bar-wrap"><span style="width:50px;font-size:12px;color:var(--color-text-secondary);text-align:right">'+src+'</span>';
+      html += '<div class="bar-bg"><div class="bar-fill" style="width:'+w+'%;background:#185FA5"><span style="font-size:11px;color:#E6F1FB;font-weight:500">'+sc.toFixed(2)+'</span></div></div></div>';
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+    window._scores = scores;
+
+  } else if (type === 'softmax') {
+    var html = '<div class="card"><div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Attention weights α(s,t) after softmax — click each output token to see its weights</div>';
+    html += '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">';
+    outputTokens.forEach(function(tok, t) {
+      html += '<button class="btn'+(t===0?' btnp':'')+'" id="smBtn'+t+'" onclick="showSoftmax('+t+')" style="font-size:11px">Generating "'+tok+'"</button>';
+    });
+    html += '</div>';
+    html += '<div id="smDisplay">';
+    inputTokens.forEach(function(src, s) {
+      var w = presetWeights[0][s];
+      var pct = Math.round(w * 100);
+      var blues = ['#E6F1FB','#85B7EB','#378ADD','#185FA5','#042C53'];
+      var idx = Math.min(4, Math.floor(w * 5));
+      html += '<div class="bar-wrap"><span style="width:50px;font-size:12px;color:var(--color-text-secondary);text-align:right">'+src+'</span>';
+      html += '<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+blues[idx]+'"><span style="font-size:11px;color:'+(idx>=3?'#E6F1FB':'#042C53')+';font-weight:500">'+pct+'%</span></div></div>';
+      html += '<span style="font-size:11px;color:var(--color-text-secondary);min-width:40px">α='+w.toFixed(2)+'</span></div>';
+    });
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;background:var(--color-background-secondary);padding:6px 10px;border-radius:6px">Sum of weights = <strong style="color:var(--color-text-primary)">'+presetWeights[0].reduce(function(a,b){return a+b},0).toFixed(2)+'</strong> — always exactly 1.0</div>';
+    html += '</div>';
+    el.innerHTML = html;
+
+  } else if (type === 'computation') {
+    var w = presetWeights[0];
+    var result = [0,0,0,0];
+    hiddenStates.forEach(function(h, s) {
+      h.forEach(function(v, d) { result[d] += w[s] * v; });
+    });
+    var html = '<div class="card">';
+    html += '<div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Context vector c(1) computation — for generating "mujhe"</div>';
+    html += '<div style="display:grid;gap:8px">';
+
+    inputTokens.forEach(function(tok, s) {
+      var pct = Math.round(w[s] * 100);
+      var opacity = 0.3 + w[s] * 0.7;
+      html += '<div style="display:flex;align-items:center;gap:8px;opacity:1">';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:#E6F1FB;border:0.5px solid #185FA5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#042C53;flex-shrink:0">'+pct+'%</div>';
+      html += '<span style="font-size:12px;color:var(--color-text-secondary);width:40px;flex-shrink:0">× h'+(s+1)+'</span>';
+      html += '<div style="background:var(--color-background-secondary);border-radius:6px;padding:6px 10px;flex:1;opacity:'+opacity+'">';
+      html += '<span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary)">"'+tok+'" → [';
+      hiddenStates[s].slice(0,3).forEach(function(v,j){ html += (j?', ':'')+(w[s]*v).toFixed(3); });
+      html += ', ...]</span></div></div>';
+    });
+
+    html += '<div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:10px;margin-top:4px">';
+    html += '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">c(1) = sum of all above:</div>';
+    html += '<div style="background:#EEEDFE;border:0.5px solid #AFA9EC;border-radius:8px;padding:10px 14px">';
+    html += '<span style="font-family:var(--font-mono);font-size:12px;color:#3C3489">[';
+    result.forEach(function(v,j){ html += (j?', ':'')+v.toFixed(3); });
+    html += ', ...]</span>';
+    html += '<div style="font-size:11px;color:#534AB7;margin-top:4px">shape: (hidden_size,) — same shape as any single hₛ</div>';
+    html += '</div></div></div></div>';
+    el.innerHTML = html;
+
+  } else if (type === 'dynamic') {
+    var html = '<div class="card"><div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Watch how c(t) shifts focus for each output word</div>';
+    html += '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+    outputTokens.forEach(function(tok, t) {
+      html += '<button class="btn'+(t===0?' btnp':'')+'" id="dynBtn'+t+'" onclick="showDynamic('+t+')" style="font-size:11px">c('+(t+1)+') → "'+tok+'"</button>';
+    });
+    html += '</div><div id="dynDisplay">';
+    html += buildDynPanel(0);
+    html += '</div></div>';
+    el.innerHTML = html;
+
+  } else if (type === 'decoder') {
+    var html = '<div class="card">';
+    html += '<div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">How the decoder uses c(t) to generate each output token</div>';
+    html += '<div style="display:grid;gap:8px">';
+    var decoderSteps = [
+      {t:1, prev:'&lt;start&gt;', ctx:'c(1) — focused on "I"', out:'"mujhe"', ctxColor:'#E1F5EE', ctxTC:'#085041'},
+      {t:2, prev:'"mujhe"', ctx:'c(2) — focused on "India"', out:'"bharat"', ctxColor:'#EEEDFE', ctxTC:'#3C3489'},
+      {t:3, prev:'"bharat"', ctx:'c(3) — focused on "love"', out:'"pyar"', ctxColor:'#FAEEDA', ctxTC:'#633806'}
+    ];
+    decoderSteps.forEach(function(ds) {
+      html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;border:0.5px solid var(--color-border-tertiary);border-radius:8px">';
+      html += '<span style="font-size:11px;color:var(--color-text-secondary);min-width:24px">t='+ds.t+'</span>';
+      html += '<span style="background:var(--color-background-secondary);padding:3px 8px;border-radius:4px;font-size:12px;font-family:var(--font-mono)">prev: '+ds.prev+'</span>';
+      html += '<span style="font-size:11px;color:var(--color-text-secondary)">+</span>';
+      html += '<span style="background:'+ds.ctxColor+';padding:3px 8px;border-radius:4px;font-size:12px;color:'+ds.ctxTC+'">'+ds.ctx+'</span>';
+      html += '<span style="font-size:11px;color:var(--color-text-secondary)">→</span>';
+      html += '<span style="background:#E6F1FB;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:500;color:#042C53">'+ds.out+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:10px;font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:8px 10px;border-radius:6px;line-height:1.7">';
+    html += 'Key insight: c(t) is recomputed at EVERY step using the updated decoder state. This creates a loop: decoder state → attention weights → context vector → new decoder state → ...';
+    html += '</div></div>';
+    el.innerHTML = html;
+  }
+}
+
+function buildDynPanel(t) {
+  var w = presetWeights[t];
+  var blues = ['#E6F1FB','#85B7EB','#378ADD','#185FA5','#042C53'];
+  var html = '';
+  inputTokens.forEach(function(tok, s) {
+    var pct = Math.round(w[s] * 100);
+    var idx = Math.min(4, Math.floor(w[s] * 5));
+    html += '<div class="bar-wrap"><span style="width:50px;font-size:12px;color:var(--color-text-secondary);text-align:right">'+tok+'</span>';
+    html += '<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+blues[idx]+'"><span style="font-size:11px;color:'+(idx>=3?'#E6F1FB':'#042C53')+';font-weight:500">'+pct+'%</span></div></div></div>';
+  });
+  var focus = inputTokens[w.indexOf(Math.max.apply(null, w))];
+  html += '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;background:var(--color-background-secondary);padding:6px 10px;border-radius:6px">Context vector c('+(t+1)+') is dominated by "'+focus+'" — decoder attends most strongly to this encoder position</div>';
+  return html;
+}
+
+window.showScores = function(t) {
+  var scores = [[2.31,0.44,0.18],[0.22,0.38,2.65],[0.11,2.88,0.51]];
+  document.querySelectorAll('[id^=scBtn]').forEach(function(b,i){b.className='btn'+(i===t?' btnp':'')});
+  var html = '';
+  inputTokens.forEach(function(src, s) {
+    var sc = scores[t][s];
+    var w = Math.min(100, Math.round((sc / 3) * 100));
+    html += '<div class="bar-wrap"><span style="width:50px;font-size:12px;color:var(--color-text-secondary);text-align:right">'+src+'</span>';
+    html += '<div class="bar-bg"><div class="bar-fill" style="width:'+w+'%;background:#185FA5"><span style="font-size:11px;color:#E6F1FB;font-weight:500">'+sc.toFixed(2)+'</span></div></div></div>';
+  });
+  document.getElementById('scoreDisplay').innerHTML = html;
+};
+
+window.showSoftmax = function(t) {
+  var w = presetWeights[t];
+  document.querySelectorAll('[id^=smBtn]').forEach(function(b,i){b.className='btn'+(i===t?' btnp':'')});
+  var blues = ['#E6F1FB','#85B7EB','#378ADD','#185FA5','#042C53'];
+  var html = '';
+  inputTokens.forEach(function(src, s) {
+    var pct = Math.round(w[s] * 100);
+    var idx = Math.min(4, Math.floor(w[s] * 5));
+    html += '<div class="bar-wrap"><span style="width:50px;font-size:12px;color:var(--color-text-secondary);text-align:right">'+src+'</span>';
+    html += '<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+blues[idx]+'"><span style="font-size:11px;color:'+(idx>=3?'#E6F1FB':'#042C53')+';font-weight:500">'+pct+'%</span></div></div>';
+    html += '<span style="font-size:11px;color:var(--color-text-secondary);min-width:40px">α='+w[s].toFixed(2)+'</span></div>';
+  });
+  var sumW = w.reduce(function(a,b){return a+b},0);
+  html += '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;background:var(--color-background-secondary);padding:6px 10px;border-radius:6px">Sum = <strong style="color:var(--color-text-primary)">'+sumW.toFixed(2)+'</strong></div>';
+  document.getElementById('smDisplay').innerHTML = html;
+};
+
+window.showDynamic = function(t) {
+  document.querySelectorAll('[id^=dynBtn]').forEach(function(b,i){b.className='btn'+(i===t?' btnp':'')});
+  document.getElementById('dynDisplay').innerHTML = buildDynPanel(t);
+};
+
+render();
+</script>
