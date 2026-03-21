@@ -1,0 +1,315 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.w{padding:.75rem 0;font-family:var(--font-sans)}
+.card{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.btn{padding:6px 14px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btnp{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.btnp:hover{background:#0C447C;color:#E6F1FB}
+.fbox{background:var(--color-background-secondary);border-left:3px solid #378ADD;border-radius:0 6px 6px 0;padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);line-height:1.8;margin:8px 0}
+.gate{border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.6;margin-bottom:6px}
+.tok-pill{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;border:.5px solid transparent;display:inline-block}
+@keyframes slideIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
+.slide{animation:slideIn .3s ease-out forwards}
+@keyframes flow{0%{stroke-dashoffset:24}100%{stroke-dashoffset:0}}
+.fl{stroke-dasharray:6 4;animation:flow .8s linear infinite}
+</style>
+
+<div class="w">
+
+<div class="card">
+  <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Click a token to watch the LSTM update its hidden state</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="tokenRow"></div>
+  <div style="font-size:11px;color:var(--color-text-secondary)">Sentence: "I love India" → encoder reads left to right, one token per step</div>
+</div>
+
+<div id="lstmViz" class="card">
+  <div style="font-size:12px;color:var(--color-text-secondary);text-align:center;padding:20px 0">Select a token above to begin</div>
+</div>
+
+<div id="gateDetail" style="display:none">
+  <div class="card">
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--color-text-primary)">Inside the LSTM — four gates fire at every step</div>
+    <div id="gateContent"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--color-text-primary)">Hidden state values — what the encoder actually stores</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">Each dimension encodes a learned feature of the input seen so far. Toggle between tokens to see how values evolve.</div>
+  <div id="stateViz"></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px" id="stateTabs"></div>
+</div>
+
+<div class="card">
+  <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--color-text-primary)">Vanilla seq2seq vs Bahdanau — what gets passed to the decoder</div>
+  <svg width="100%" viewBox="0 0 680 200" style="overflow:visible">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+    <text class="ts" x="160" y="22" text-anchor="middle" fill="#A32D2D" font-size="12" font-weight="500">Vanilla — one fixed vector</text>
+    <rect x="40" y="35" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".5"/>
+    <text class="ts" x="68" y="55" text-anchor="middle" fill="#085041" font-size="11">h₁</text>
+    <rect x="108" y="35" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".5"/>
+    <text class="ts" x="136" y="55" text-anchor="middle" fill="#085041" font-size="11">h₂</text>
+    <rect x="176" y="35" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".5"/>
+    <text class="ts" x="204" y="55" text-anchor="middle" fill="#085041" font-size="11">h₃</text>
+    <line x1="232" y1="51" x2="262" y2="51" stroke="#888780" stroke-width="1" marker-end="url(#ar)"/>
+    <rect x="262" y="35" width="76" height="32" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+    <text class="ts" x="300" y="51" text-anchor="middle" fill="#633806" font-size="11" font-weight="500">h₃ only</text>
+    <text class="ts" x="300" y="62" text-anchor="middle" fill="#854F0B" font-size="10">final state</text>
+    <line x1="338" y1="51" x2="360" y2="51" stroke="#A32D2D" stroke-width="1" marker-end="url(#ar)"/>
+    <rect x="360" y="35" width="68" height="32" rx="6" fill="#FCEBEB" stroke="#A32D2D" stroke-width=".5"/>
+    <text class="ts" x="394" y="55" text-anchor="middle" fill="#791F1F" font-size="11">Decoder</text>
+    <text class="ts" x="126" y="88" text-anchor="middle" fill="#A32D2D" font-size="10">h₁, h₂ discarded — bottleneck!</text>
+
+    <text class="ts" x="160" y="118" text-anchor="middle" fill="#085041" font-size="12" font-weight="500">Bahdanau — all states available</text>
+    <rect x="40" y="130" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+    <text class="ts" x="68" y="150" text-anchor="middle" fill="#085041" font-size="11" font-weight="500">h₁</text>
+    <rect x="108" y="130" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+    <text class="ts" x="136" y="150" text-anchor="middle" fill="#085041" font-size="11" font-weight="500">h₂</text>
+    <rect x="176" y="130" width="56" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+    <text class="ts" x="204" y="150" text-anchor="middle" fill="#085041" font-size="11" font-weight="500">h₃</text>
+    <line x1="68" y1="162" x2="400" y2="178" stroke="#1D9E75" stroke-width=".8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+    <line x1="136" y1="162" x2="400" y2="178" stroke="#1D9E75" stroke-width=".8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+    <line x1="204" y1="162" x2="400" y2="178" stroke="#1D9E75" stroke-width=".8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+    <rect x="400" y="163" width="72" height="32" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width=".5"/>
+    <text class="ts" x="436" y="182" text-anchor="middle" fill="#3C3489" font-size="11">Attention</text>
+    <line x1="472" y1="179" x2="496" y2="179" stroke="#7F77DD" stroke-width="1" marker-end="url(#ar)"/>
+    <rect x="496" y="163" width="68" height="32" rx="6" fill="#FAECE7" stroke="#993C1D" stroke-width=".5"/>
+    <text class="ts" x="530" y="179" text-anchor="middle" fill="#712B13" font-size="11">Decoder</text>
+    <text class="ts" x="200" y="198" text-anchor="middle" fill="#085041" font-size="10">all h₁…hₙ kept — attention picks what matters per step</text>
+  </svg>
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+  <button class="btn" onclick="sendPrompt('Explain the LSTM forget gate, input gate, and output gate in detail')">LSTM gates deep dive ↗</button>
+  <button class="btn" onclick="sendPrompt('What is the difference between hidden state and cell state in LSTM?')">hₜ vs cₜ ↗</button>
+  <button class="btn" onclick="sendPrompt('How does bidirectional LSTM encoder work in seq2seq?')">Bidirectional LSTM ↗</button>
+</div>
+
+</div>
+
+<script>
+var tokens = ['I','love','India'];
+var activeToken = -1;
+var activeStateTab = 0;
+
+var tokenData = [
+  {
+    word: 'I',
+    embed: [0.21, -0.44, 0.87, 0.13, -0.62, 0.35],
+    h: [0.82, -0.34, 0.61, 0.15, -0.28, 0.47, 0.09, -0.51],
+    c: [1.14, -0.61, 0.88, 0.22, -0.40, 0.61, 0.13, -0.72],
+    meaning: 'After "I": encodes that a first-person subject has been seen. The state contains early syntactic signals — this is the start of a sentence, pronoun detected.',
+    gates: {
+      forget: {val: 0.91, desc: 'High — first token, nothing to forget yet. Cell state is nearly fully retained.'},
+      input:  {val: 0.78, desc: 'High — this is new information. The embedding of "I" (pronoun, subject) is being written into the cell state.'},
+      gate:   {val: 0.63, desc: 'Candidate values computed from input embedding. Controls what new content enters the cell state.'},
+      output: {val: 0.55, desc: 'Moderate — enough of the cell state is exposed as the hidden state to represent the subject pronoun.'}
+    }
+  },
+  {
+    word: 'love',
+    embed: [0.74, 0.12, -0.33, 0.91, 0.05, -0.48],
+    h: [-0.12, 0.91, 0.44, -0.67, 0.33, -0.15, 0.72, 0.28],
+    c: [-0.18, 1.42, 0.68, -0.95, 0.51, -0.23, 1.05, 0.41],
+    meaning: 'After "I love": encodes subject + sentiment verb. The hidden state now carries both the pronoun context from h₁ AND new emotional/verbal information. Notice how the values shift significantly.',
+    gates: {
+      forget: {val: 0.44, desc: 'Lower — the LSTM is selectively forgetting aspects of h₁ that are no longer needed now a verb has arrived.'},
+      input:  {val: 0.85, desc: 'Very high — "love" is a strong, sentiment-bearing token. A lot of new content is being written into the cell state.'},
+      gate:   {val: 0.77, desc: 'High candidate values — the verb embedding is rich and produces strong candidate updates to the cell state.'},
+      output: {val: 0.71, desc: 'High — the hidden state now needs to expose both subject and verb information for downstream use.'}
+    }
+  },
+  {
+    word: 'India',
+    embed: [-0.18, 0.55, 0.32, -0.27, 0.88, 0.44],
+    h: [0.55, 0.23, -0.88, 0.71, 0.18, -0.42, 0.61, -0.34],
+    c: [0.81, 0.35, -1.29, 1.04, 0.27, -0.62, 0.89, -0.49],
+    meaning: 'After "I love India": the final hidden state h₃ encodes the complete phrase — subject, sentiment, object. This is the state vanilla seq2seq passes to the decoder as its only context.',
+    gates: {
+      forget: {val: 0.61, desc: 'Moderate — some earlier state is retained (especially the subject/verb relation), but space is made for the object.'},
+      input:  {val: 0.69, desc: 'Moderate-high — "India" is a proper noun/object with significant semantic content. Written into cell state.'},
+      gate:   {val: 0.58, desc: 'Moderate candidate — the proper noun embedding updates the cell state with geographic/object information.'},
+      output: {val: 0.80, desc: 'High — the full sentence meaning is now in the cell state; the output gate exposes most of it as the hidden state h₃.'}
+    }
+  }
+];
+
+function buildTokenRow() {
+  var row = document.getElementById('tokenRow');
+  row.innerHTML = '';
+  tokens.forEach(function(tok, i) {
+    var pill = document.createElement('div');
+    pill.className = 'tok-pill';
+    pill.textContent = 'x' + (i+1) + ': "' + tok + '"';
+    var isActive = i === activeToken;
+    pill.style.cssText = 'padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-block;' +
+      (isActive
+        ? 'background:#E1F5EE;border:1.5px solid #1D9E75;color:#085041;'
+        : 'background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);color:var(--color-text-secondary);');
+    pill.onclick = (function(idx){ return function(){ activeToken = idx; activeStateTab = idx; render(); }; })(i);
+    row.appendChild(pill);
+  });
+}
+
+function renderLSTM(d, stepIdx) {
+  var el = document.getElementById('lstmViz');
+  var prevH = stepIdx > 0 ? tokenData[stepIdx-1].h : null;
+
+  var html = '<div class="slide">';
+  html += '<div style="font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">Step t=' + (stepIdx+1) + ' — reading "' + d.word + '"</div>';
+
+  html += '<svg width="100%" viewBox="0 0 640 160" style="margin-bottom:12px">';
+  html += '<defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+
+  // Input token box
+  html += '<rect x="20" y="60" width="80" height="40" rx="8" fill="#F1EFE8" stroke="#888780" stroke-width=".5"/>';
+  html += '<text x="60" y="76" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">x' + (stepIdx+1) + ': "' + d.word + '"</text>';
+  html += '<text x="60" y="90" text-anchor="middle" font-size="10" fill="#5F5E5A">embedding</text>';
+
+  // Arrow: input → LSTM
+  html += '<line x1="100" y1="80" x2="162" y2="80" stroke="#888780" stroke-width="1" marker-end="url(#ar2)"/>';
+
+  // Prev hidden state
+  if (prevH) {
+    html += '<rect x="160" y="18" width="84" height="32" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width=".5"/>';
+    html += '<text x="202" y="34" text-anchor="middle" font-size="11" fill="#085041" font-weight="500">h' + stepIdx + ' in</text>';
+    html += '<text x="202" y="44" text-anchor="middle" font-size="9" fill="#0F6E56">prev state</text>';
+    html += '<line x1="202" y1="50" x2="202" y2="62" stroke="#1D9E75" stroke-width="1" marker-end="url(#ar2)"/>';
+  }
+
+  // LSTM cell
+  html += '<rect x="162" y="60" width="160" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>';
+  html += '<text x="242" y="85" text-anchor="middle" font-size="12" font-weight="500" fill="#042C53">LSTM cell</text>';
+  html += '<text x="242" y="100" text-anchor="middle" font-size="10" fill="#185FA5">forget · input · output</text>';
+  html += '<text x="242" y="112" text-anchor="middle" font-size="10" fill="#185FA5">gate · cell update</text>';
+
+  // Arrow: LSTM → hₜ
+  html += '<line x1="322" y1="80" x2="380" y2="80" stroke="#1D9E75" stroke-width="1.5" class="fl" marker-end="url(#ar2)"/>';
+
+  // New hidden state
+  html += '<rect x="380" y="60" width="80" height="40" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>';
+  html += '<text x="420" y="76" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">h' + (stepIdx+1) + '</text>';
+  html += '<text x="420" y="90" text-anchor="middle" font-size="10" fill="#0F6E56">hidden state</text>';
+
+  // Arrow to cell state
+  html += '<line x1="242" y1="120" x2="242" y2="148" stroke="#EF9F27" stroke-width="1" marker-end="url(#ar2)"/>';
+  html += '<rect x="192" y="148" width="100" height="30" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width=".5"/>';
+  html += '<text x="242" y="167" text-anchor="middle" font-size="11" fill="#633806">c' + (stepIdx+1) + ' (cell state)</text>';
+
+  // Arrow hₜ → next step
+  if (stepIdx < 2) {
+    html += '<text x="500" y="72" font-size="10" fill="var(--color-text-secondary)">→ to step ' + (stepIdx+2) + '</text>';
+    html += '<line x1="460" y1="80" x2="520" y2="80" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ar2)"/>';
+  } else {
+    html += '<text x="490" y="72" font-size="10" fill="#3C3489">→ to attention</text>';
+    html += '<line x1="460" y1="80" x2="530" y2="80" stroke="#7F77DD" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ar2)"/>';
+  }
+
+  html += '</svg>';
+
+  // Meaning card
+  html += '<div style="background:var(--color-background-secondary);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:10px;border-left:3px solid #1D9E75">';
+  html += d.meaning;
+  html += '</div>';
+
+  // Formula
+  html += '<div class="fbox">hₜ = o_gate ⊙ tanh(cₜ)\ncₜ = f_gate ⊙ cₜ₋₁  +  i_gate ⊙ g_gate\n\nf = σ(Wf·[hₜ₋₁, xₜ] + bf)   ← forget gate\ni = σ(Wi·[hₜ₋₁, xₜ] + bi)   ← input gate\ng = tanh(Wg·[hₜ₋₁, xₜ] + bg) ← candidate\no = σ(Wo·[hₜ₋₁, xₜ] + bo)   ← output gate</div>';
+
+  html += '<button class="btn btnp" onclick="document.getElementById(\'gateDetail\').style.display=\'block\';renderGates(' + stepIdx + ')" style="font-size:11px">Show gate values for this step</button>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderGates(idx) {
+  var d = tokenData[idx];
+  var names = ['forget','input','gate','output'];
+  var labels = ['Forget gate f', 'Input gate i', 'Cell gate g (candidate)', 'Output gate o'];
+  var colors = [
+    {bg:'#FCEBEB',border:'#A32D2D',tc:'#791F1F',bar:'#E24B4A'},
+    {bg:'#EAF3DE',border:'#3B6D11',tc:'#173404',bar:'#639922'},
+    {bg:'#E6F1FB',border:'#185FA5',tc:'#042C53',bar:'#378ADD'},
+    {bg:'#EEEDFE',border:'#534AB7',tc:'#3C3489',bar:'#7F77DD'}
+  ];
+  var html = '';
+  names.forEach(function(name, i) {
+    var g = d.gates[name];
+    var pct = Math.round(g.val * 100);
+    var c = colors[i];
+    html += '<div class="gate" style="background:' + c.bg + ';border-left:3px solid ' + c.border + '">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">';
+    html += '<div style="font-size:12px;font-weight:500;color:' + c.tc + '">' + labels[i] + '</div>';
+    html += '<div style="font-size:13px;font-weight:500;color:' + c.tc + '">' + g.val.toFixed(2) + '</div></div>';
+    html += '<div style="height:6px;background:rgba(0,0,0,.08);border-radius:3px;margin-bottom:6px">';
+    html += '<div style="width:' + pct + '%;height:100%;background:' + c.bar + ';border-radius:3px;transition:width .4s"></div></div>';
+    html += '<div style="font-size:11px;color:' + c.tc + ';opacity:.85">' + g.desc + '</div>';
+    html += '</div>';
+  });
+  document.getElementById('gateContent').innerHTML = html;
+}
+
+function renderStateViz() {
+  var el = document.getElementById('stateViz');
+  var tabs = document.getElementById('stateTabs');
+
+  // Build tabs
+  tabs.innerHTML = '';
+  tokens.forEach(function(tok, i) {
+    var b = document.createElement('button');
+    b.className = 'btn' + (i === activeStateTab ? ' btnp' : '');
+    b.textContent = 'h' + (i+1) + ' — "' + tok + '"';
+    b.onclick = (function(idx){ return function(){ activeStateTab = idx; renderStateViz(); }; })(i);
+    tabs.appendChild(b);
+  });
+
+  var d = tokenData[activeStateTab];
+  var maxVal = Math.max.apply(null, d.h.map(Math.abs));
+  var blues = ['#E6F1FB','#B5D4F4','#85B7EB','#378ADD','#185FA5','#042C53'];
+  var reds  = ['#FCEBEB','#F7C1C1','#F09595','#E24B4A','#A32D2D','#791F1F'];
+
+  var html = '<div style="display:grid;gap:5px;margin-bottom:10px">';
+  d.h.forEach(function(val, i) {
+    var norm = val / maxVal;
+    var pct = Math.abs(norm) * 100;
+    var isPos = val >= 0;
+    var barColors = isPos ? blues : reds;
+    var idx = Math.min(5, Math.floor(Math.abs(norm) * 6));
+    var barColor = barColors[idx];
+    var labelColor = idx >= 4 ? (isPos ? '#E6F1FB' : '#FCEBEB') : 'var(--color-text-secondary)';
+
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary);width:24px;text-align:right">[' + i + ']</span>';
+    if (!isPos) {
+      html += '<div style="flex:1;display:flex;justify-content:flex-end">';
+      html += '<div style="width:' + pct + '%;height:20px;background:' + barColor + ';border-radius:4px 0 0 4px;display:flex;align-items:center;justify-content:flex-start;padding-left:4px">';
+      html += '<span style="font-size:10px;font-weight:500;color:' + labelColor + '">' + val.toFixed(3) + '</span></div></div>';
+      html += '<div style="width:1px;height:20px;background:var(--color-border-secondary)"></div>';
+      html += '<div style="flex:1"></div>';
+    } else {
+      html += '<div style="flex:1"></div>';
+      html += '<div style="width:1px;height:20px;background:var(--color-border-secondary)"></div>';
+      html += '<div style="flex:1">';
+      html += '<div style="width:' + pct + '%;height:20px;background:' + barColor + ';border-radius:0 4px 4px 0;display:flex;align-items:center;justify-content:flex-end;padding-right:4px">';
+      html += '<span style="font-size:10px;font-weight:500;color:' + labelColor + '">' + val.toFixed(3) + '</span></div></div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:8px 10px;border-radius:6px;line-height:1.7">';
+  html += 'Showing first 8 of 256 dimensions. Blue bars = positive values, red = negative. Each dimension is a learned feature — the model decides what each one encodes during training. After seeing "' + tokens[activeStateTab] + '", the state captures everything up to and including this token.';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function render() {
+  buildTokenRow();
+  if (activeToken >= 0) {
+    renderLSTM(tokenData[activeToken], activeToken);
+    document.getElementById('gateDetail').style.display = 'none';
+  }
+  renderStateViz();
+}
+
+render();
+</script>
